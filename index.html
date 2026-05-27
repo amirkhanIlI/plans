@@ -2,31 +2,19 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой План</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="container">
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('tab-flexible')">План</button>
-            <button class="tab-btn" onclick="switchTab('tab-timeline')">Расписание</button>
+        <h2>Мой План</h2>
+        <div class="input-area">
+            <input type="text" id="todo-input" placeholder="Введите слово или задачу...">
+            <button id="add-btn">Добавить</button>
         </div>
-
-        <div id="tab-flexible" class="tab-content active-content">
-            <div class="input-area">
-                <input type="text" id="todo-input" placeholder="Введите слово или задачу...">
-                <button id="add-btn">Добавить</button>
-            </div>
-            <ul id="todo-list"></ul>
-        </div>
-
-        <div id="tab-timeline" class="tab-content">
-            <div class="timeline-scroll">
-                <div id="timeline-list"></div>
-            </div>
-        </div>
+        <ul id="todo-list"></ul>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
