@@ -1,197 +1,120 @@
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #1e1e24;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    padding-top: 20px;
-    margin: 0;
-    -webkit-tap-highlight-color: transparent;
+const input = document.getElementById('todo-input');
+const addBtn = document.getElementById('add-btn');
+const todoList = document.getElementById('todo-list');
+
+// Загрузка данных или дефолтный список, если памяти нет
+let tasks = JSON.parse(localStorage.getItem('my-todo-list')) || [
+    { start: "15:00", end: "16:00", text: "Зал" },
+    { start: "16:00", end: "17:00", text: "Бассейн" },
+    { start: "18:00", end: "19:00", text: "Английский" },
+    { start: "20:00", end: "21:00", text: "Бег" }
+];
+
+// Функция отрисовки списка
+function renderTasks() {
+    todoList.innerHTML = '';
+    tasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        li.dataset.index = index;
+        
+        li.innerHTML = `
+            <div class="time-section">
+                <div class="time-picker-wrapper">
+                    <span class="time-text">${task.start}</span>
+                    <input type="time" class="time-input" value="${task.start}" onchange="updateTime(${index}, 'start', this.value)">
+                </div>
+                <span class="time-separator">-</span>
+                <div class="time-picker-wrapper">
+                    <span class="time-text">${task.end}</span>
+                    <input type="time" class="time-input" value="${task.end}" onchange="updateTime(${index}, 'end', this.value)">
+                </div>
+            </div>
+            
+            <div class="text-section">
+                <input type="text" class="task-text" value="${task.text}" onchange="updateText(${index}, this.value)" onblur="updateText(${index}, this.value)">
+            </div>
+            
+            <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
+        `;
+        todoList.appendChild(li);
+    });
 }
 
-.container {
-    width: 100%;
-    max-width: 400px;
-    background: #2a2a32;
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    display: flex;
-    flex-direction: column;
-    height: 90vh; /* Ограничиваем высоту под экран телефона */
+// Сохранение в LocalStorage
+function saveToStorage() {
+    localStorage.setItem('my-todo-list', JSON.stringify(tasks));
 }
 
-/* Стили вкладок (Кнопки переключения) */
-.tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    background: #1e1e24;
-    padding: 5px;
-    border-radius: 8px;
+// Добавление новой строки
+function addTask() {
+    const text = input.value.trim();
+    if (text !== '') {
+        tasks.push({
+            start: "12:00",
+            end: "13:00",
+            text: text
+        });
+        input.value = '';
+        saveToStorage();
+        renderTasks();
+    }
 }
 
-.tab-btn {
-    flex: 1;
-    padding: 10px;
-    background: transparent;
-    border: none;
-    color: #888;
-    font-weight: bold;
-    font-size: 15px;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.2s;
-}
+// Обновление времени
+window.updateTime = function(index, type, value) {
+    if(value) {
+        tasks[index][type] = value;
+        saveToStorage();
+        renderTasks(); // Перерисовываем, чтобы обновить видимый текстовый таймстамп
+    }
+};
 
-.tab-btn.active {
-    background: #4dabf7;
-    color: #fff;
-}
+// Обновление текста при изменении
+window.updateText = function(index, value) {
+    tasks[index].text = value.trim();
+    saveToStorage();
+};
 
-/* Управление видимостью вкладок */
-.tab-content {
-    display: none;
-    flex-direction: column;
-    flex: 1;
-    overflow-y: auto;
-}
+// Удаление задачи
+window.deleteTask = function(index) {
+    tasks.splice(index, 1);
+    saveToStorage();
+    renderTasks();
+};
 
-.tab-content.active-content {
-    display: flex;
-}
+// Слушатели для ввода нового пункта
+addBtn.addEventListener('click', addTask);
+input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addTask();
+});
 
-/* Стили Вкладки 1 */
-.input-area {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
+// Инициализация плавного Sortable
+new Sortable(todoList, {
+    animation: 280,            // Сделали анимацию перемещения более плавной и мягкой (было 150)
+    delay: 50,                 // Небольшая задержка перед перетаскиванием, чтобы случайно не дергать при кликах
+    delayOnTouchOnly: true,    // Задержка активна только на экранах телефонов
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    handle: '.time-section, .text-section', // Тянуть можно за любую часть, кроме крестика
+    filter: 'input',           // Запрещаем тащить, когда фокус внутри ввода текста
+    preventOnFilter: false,
+    onEnd: function () {
+        // Выстраиваем новый массив по актуальному порядку элементов на экране
+        const currentLis = todoList.querySelectorAll('li');
+        const updatedTasks = [];
+        currentLis.forEach(li => {
+            const index = li.dataset.index;
+            // Собираем актуальные данные прямо с экрана на случай, если фокус не потерялся
+            const start = li.querySelectorAll('.time-text')[0].innerText;
+            const end = li.querySelectorAll('.time-text')[1].innerText;
+            const text = li.querySelector('.task-text').value;
+            updatedTasks.push({ start, end, text });
+        });
+        tasks = updatedTasks;
+        saveToStorage(); // Сохраняем измененный порядок
+        renderTasks();   // Обновляем индексы в дата-атрибутах
+    }
+});
 
-input[type="text"] {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    background: #3a3a44;
-    color: #fff;
-    outline: none;
-    font-size: 16px;
-}
-
-button#add-btn {
-    padding: 12px 18px;
-    border: none;
-    border-radius: 8px;
-    background: #4dabf7;
-    color: #fff;
-    font-weight: bold;
-    font-size: 16px;
-}
-
-ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-li {
-    background: #3a3a44;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    cursor: grab;
-    user-select: none;
-    overflow: hidden;
-}
-
-.time-section {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 14px 10px 14px 14px;
-    border-right: 2px solid #2a2a32;
-}
-
-.time-picker-wrapper {
-    position: relative;
-}
-
-.time-text {
-    font-size: 15px;
-    color: #e0e0e0;
-}
-
-.time-input {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    opacity: 0;
-    cursor: pointer;
-}
-
-.text-section {
-    flex: 1;
-    padding: 14px 10px;
-}
-
-.task-text {
-    font-size: 16px;
-    color: #fff;
-    width: 100%;
-    border: none;
-    background: transparent;
-    outline: none;
-}
-
-.delete-btn {
-    background: none;
-    border: none;
-    color: #ff6b6b;
-    font-size: 18px;
-    padding: 14px;
-}
-
-/* Стили Вкладки 2 (Сетка 24 часа) */
-.timeline-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 5px;
-}
-
-.timeline-row {
-    display: flex;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #3a3a44;
-}
-
-.timeline-time {
-    width: 60px;
-    font-size: 15px;
-    color: #4dabf7;
-    font-weight: bold;
-    font-variant-numeric: tabular-nums;
-}
-
-.timeline-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: #fff;
-    font-size: 16px;
-    padding: 8px 12px;
-    outline: none;
-    border-radius: 6px;
-    transition: background 0.2s;
-}
-
-.timeline-input:focus {
-    background: #3a3a44;
-}
-
-/* Сортировка */
-.sortable-ghost {
-    opacity: 0.3;
-    background: #4dabf7;
-}
+// Первая отрисовка
+renderTasks();
